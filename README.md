@@ -3,18 +3,18 @@
 A minimal macOS menu bar app that displays your Claude Pro usage.
 
 ```
-◑ 44%              ← Menu bar
-┌─────────────────────┐
-│ Claude Pro Usage    │
-│─────────────────────│
-│ Used: 44%           │
+◑ 44%  ← Menu bar
+┌──────────────────────────┐
+│ Claude Pro Usage         │
+├──────────────────────────┤
+│ Used: 44%                │
 │ Resets: 3h 12m (6:45 PM) │
-│─────────────────────│
-│ Refresh             │
-│ Set Session Key...  │
-│─────────────────────│
-│ Quit                │
-└─────────────────────┘
+├──────────────────────────┤
+│ Refresh                  │
+│ Set Session Key...       │
+├──────────────────────────┤
+│ Quit                     │
+└──────────────────────────┘
 ```
 
 ## Features
