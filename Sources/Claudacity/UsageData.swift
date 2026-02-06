@@ -1,0 +1,36 @@
+import Foundation
+
+struct UsageData {
+    let percentage: Double
+    let resetsAt: Date?
+
+    var timeUntilReset: String? {
+        guard let resetsAt = resetsAt else { return nil }
+        let seconds = Int(resetsAt.timeIntervalSinceNow)
+        guard seconds > 0 else { return "Now" }
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+    }
+
+    var resetTimeString: String? {
+        guard let resetsAt = resetsAt else { return nil }
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f.string(from: resetsAt)
+    }
+
+    var icon: String {
+        switch percentage {
+        case ..<25: return "○"
+        case ..<50: return "◔"
+        case ..<75: return "◑"
+        case ..<90: return "◕"
+        default: return "●"
+        }
+    }
+}
+
+struct Organization: Codable {
+    let uuid: String
+}
