@@ -4,6 +4,7 @@ import Security
 class UsageService {
     private var sessionKey: String?
     private var orgId: String?
+    private var planName = "Claude"
     private static let keychainService = "com.local.claudacity"
     private static let keychainAccount = "sessionKey"
 
@@ -69,6 +70,7 @@ class UsageService {
             let (data, _) = try await request("https://claude.ai/api/organizations", key: key)
             guard let org = (try? JSONDecoder().decode([Organization].self, from: data))?.first else { throw Err.parse }
             orgId = org.uuid
+            planName = org.planName
         }
 
         let (data, _) = try await request("https://claude.ai/api/organizations/\(orgId!)/usage", key: key)
@@ -82,7 +84,7 @@ class UsageService {
             f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             reset = f.date(from: str)
         }
-        return UsageData(percentage: pct, resetsAt: reset)
+        return UsageData(percentage: pct, resetsAt: reset, planName: planName)
     }
 
     private func request(_ urlString: String, key: String) async throws -> (Data, HTTPURLResponse) {
