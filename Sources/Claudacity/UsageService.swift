@@ -21,7 +21,7 @@ class UsageService {
 
         var helpSteps: [String]? {
             if case .noKey = self {
-                return ["Click 'Set Session Key...'", "Get from: claude.ai > Cmd+Opt+I > Storage > Cookies"]
+                return ["Click 'Sign In to Claude...' to authenticate"]
             }
             return nil
         }
@@ -31,6 +31,17 @@ class UsageService {
         sessionKey = key
         orgId = nil
         saveToKeychain(key)
+    }
+
+    func clearKey() {
+        sessionKey = nil
+        orgId = nil
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: Self.keychainAccount
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     private func saveToKeychain(_ key: String) {

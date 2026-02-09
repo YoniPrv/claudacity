@@ -11,7 +11,8 @@ A minimal macOS menu bar app that displays your Claude Pro usage.
 │ Resets: 3h 12m (6:45 PM) │
 ├──────────────────────────┤
 │ Refresh                  │
-│ Set Session Key...       │
+│ Sign In to Claude...     │
+│ Sign Out                 │
 ├──────────────────────────┤
 │ Quit                     │
 └──────────────────────────┘
@@ -22,13 +23,14 @@ A minimal macOS menu bar app that displays your Claude Pro usage.
 - Usage percentage in menu bar with visual indicator (○ ◔ ◑ ◕ ●)
 - Time until quota resets (5-hour rolling window)
 - Auto-refreshes every 10 minutes
+- In-app sign in via embedded browser (no manual cookie copying)
 - Session key stored in macOS Keychain
 
 ## Requirements
 
 - macOS 13+
 - Claude Pro subscription
-- Xcode Command Line Tools (`xcode-select --install`)
+- Xcode (`xcode-select -s /Applications/Xcode.app/Contents/Developer`)
 
 ## Install
 
@@ -46,20 +48,18 @@ cp -r Claudacity.app /Applications/
 
 ## Setup
 
-1. Log into [claude.ai](https://claude.ai) in Safari
-2. Open Developer Tools: `Cmd + Option + I`
-3. Go to **Storage** tab → **Cookies** → click on `claude.ai`
-4. Find `sessionKey` row and copy the **Value** (starts with `sk-ant-`)
-5. Click Claudacity menu bar icon → **Set Session Key...** → paste → OK
+1. Click the Claudacity menu bar icon → **Sign In to Claude...**
+2. A browser window opens — log in with your email or Google account
+3. The window closes automatically and your usage appears
 
-> **Note:** Session keys expire periodically. If you see ⚠️, repeat the setup steps.
+> **Note:** If your session expires (you see ⚠️), just sign in again.
 
 ## Security
 
 - Session key stored in encrypted macOS Keychain
 - Only connects to `claude.ai` API
 - No analytics, telemetry, or third-party services
-- [View source code](Sources/Claudacity) — it's ~150 lines
+- [View source code](Sources/Claudacity) — it's ~200 lines
 
 ## Uninstall
 
