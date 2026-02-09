@@ -34,7 +34,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateUI() {
-        statusItem.button?.title = error != nil ? "⚠️" : "\(usage?.icon ?? "○") \(Int(usage?.percentage ?? 0))%"
+        if error != nil {
+            statusItem.button?.title = "⚠️"
+        } else {
+            let icon = usage?.icon ?? "○"
+            let pct = Int(usage?.percentage ?? 0)
+            // Color based on time to reset: green when close to reset, red when far
+            let seconds = usage?.resetsAt?.timeIntervalSinceNow ?? 0
+            let ratio = min(1, max(0, seconds / 18000)) // 18000s = 5 hour window
+            let hue = 0.33 * (1 - ratio) // 0.33 (green) near reset, 0.0 (red) far from reset
+            let color = NSColor(hue: hue, saturation: 0.9, brightness: 0.85, alpha: 1.0)
+            let str = NSMutableAttributedString()
+            str.append(NSAttributedString(string: icon, attributes: [.foregroundColor: color]))
+            str.append(NSAttributedString(string: " \(pct)%"))
+            statusItem.button?.attributedTitle = str
+        }
 
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "\(usage?.planName ?? "Claude") Usage", action: nil, keyEquivalent: ""))
