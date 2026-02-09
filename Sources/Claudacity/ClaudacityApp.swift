@@ -37,7 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.title = error != nil ? "⚠️" : "\(usage?.icon ?? "○") \(Int(usage?.percentage ?? 0))%"
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Claude Pro Usage", action: nil, keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "\(usage?.planName ?? "Claude") Usage", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
 
         if let e = error {

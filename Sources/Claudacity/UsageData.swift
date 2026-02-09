@@ -3,6 +3,7 @@ import Foundation
 struct UsageData {
     let percentage: Double
     let resetsAt: Date?
+    let planName: String
 
     var timeUntilReset: String? {
         guard let resetsAt = resetsAt else { return nil }
@@ -33,4 +34,11 @@ struct UsageData {
 
 struct Organization: Codable {
     let uuid: String
+    let capabilities: [String]?
+
+    var planName: String {
+        capabilities?.first { $0.hasPrefix("claude_") }
+            .map { $0.replacingOccurrences(of: "_", with: " ").capitalized }
+            ?? "Claude"
+    }
 }
