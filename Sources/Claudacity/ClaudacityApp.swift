@@ -40,10 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             let icon = usage?.icon ?? "○"
             let pct = Int(usage?.percentage ?? 0)
-            // Color based on time to reset: green when close to reset, red when far
-            let seconds = usage?.resetsAt?.timeIntervalSinceNow ?? 0
-            let ratio = min(1, max(0, seconds / 18000)) // 18000s = 5 hour window
-            let hue = 0.33 * (1 - ratio) // 0.33 (green) near reset, 0.0 (red) far from reset
+            // Color based on usage: green (low usage) → red (high usage)
+            let ratio = min(1, max(0, (usage?.percentage ?? 0) / 100))
+            let hue = 0.33 * (1 - ratio) // 0.33 (green) at 0%, 0.0 (red) at 100%
             let color = NSColor(hue: hue, saturation: 0.9, brightness: 0.85, alpha: 1.0)
             let str = NSMutableAttributedString()
             str.append(NSAttributedString(string: icon, attributes: [.foregroundColor: color]))
