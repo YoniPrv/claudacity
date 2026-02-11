@@ -11,8 +11,8 @@ A minimal macOS menu bar app that displays your Claude Pro usage.
 │ Resets: 3h 12m (6:45 PM) │
 ├──────────────────────────┤
 │ Refresh                  │
-│ Sign In to Claude...     │
 │ Sign Out                 │
+│ Notifications        ✓   │
 ├──────────────────────────┤
 │ Quit                     │
 └──────────────────────────┘
@@ -20,9 +20,12 @@ A minimal macOS menu bar app that displays your Claude Pro usage.
 
 ## Features
 
-- Usage percentage in menu bar with visual indicator (○ ◔ ◑ ◕ ●)
+- Usage percentage in menu bar with color-coded indicator (○ ◔ ◑ ◕ ●)
 - Time until quota resets (5-hour rolling window)
 - Auto-refreshes every 10 minutes
+- macOS notifications at 50%, 80%, and 90% usage thresholds
+- Notification when quota resets
+- Toggle notifications on/off from the menu
 - In-app sign in via embedded browser (no manual cookie copying)
 - Session key stored in macOS Keychain
 
@@ -51,6 +54,7 @@ cp -r Claudacity.app /Applications/
 1. Click the Claudacity menu bar icon → **Sign In to Claude...**
 2. A browser window opens — log in with your email or Google account
 3. The window closes automatically and your usage appears
+4. On first launch, allow notifications when prompted
 
 > **Note:** If your session expires (you see ⚠️), just sign in again.
 
