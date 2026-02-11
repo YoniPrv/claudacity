@@ -19,6 +19,7 @@ class LoginWindow: NSWindow, WKHTTPCookieStoreObserver, WKUIDelegate {
         center()
 
         let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
         config.preferences.javaScriptCanOpenWindowsAutomatically = true
         webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = self
