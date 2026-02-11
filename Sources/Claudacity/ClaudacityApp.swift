@@ -54,16 +54,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(.separator())
         let isSignedIn = usage != nil
         if isSignedIn {
-        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshClicked), keyEquivalent: "r")
-        refreshItem.target = self
-        menu.addItem(refreshItem)
+            let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshClicked), keyEquivalent: "r")
+            refreshItem.target = self
+            menu.addItem(refreshItem)
             let signOutItem = NSMenuItem(title: "Sign Out", action: #selector(signOutClicked), keyEquivalent: "")
             signOutItem.target = self
             menu.addItem(signOutItem)
         } else {
-        let signInItem = NSMenuItem(title: "Sign In to Claude...", action: #selector(signInClicked), keyEquivalent: "")
-        signInItem.target = self
-        menu.addItem(signInItem)
+            let signInItem = NSMenuItem(title: "Sign In to Claude...", action: #selector(signInClicked), keyEquivalent: "")
+            signInItem.target = self
+            menu.addItem(signInItem)
         }
         menu.addItem(.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q")
