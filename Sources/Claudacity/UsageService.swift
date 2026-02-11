@@ -39,7 +39,8 @@ class UsageService {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.keychainService,
-            kSecAttrAccount as String: Self.keychainAccount
+            kSecAttrAccount as String: Self.keychainAccount,
+            kSecUseDataProtectionKeychain as String: true
         ]
         SecItemDelete(query as CFDictionary)
     }
@@ -49,7 +50,8 @@ class UsageService {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.keychainService,
-            kSecAttrAccount as String: Self.keychainAccount
+            kSecAttrAccount as String: Self.keychainAccount,
+            kSecUseDataProtectionKeychain as String: true
         ]
         SecItemDelete(query as CFDictionary)
         var newItem = query
@@ -62,6 +64,7 @@ class UsageService {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.keychainService,
             kSecAttrAccount as String: Self.keychainAccount,
+            kSecUseDataProtectionKeychain as String: true,
             kSecReturnData as String: true
         ]
         var result: AnyObject?
