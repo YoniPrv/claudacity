@@ -9,6 +9,7 @@ echo "Creating app bundle..."
 rm -rf Claudacity.app
 mkdir -p Claudacity.app/Contents/{MacOS,Resources}
 cp .build/release/Claudacity Claudacity.app/Contents/MacOS/
+cp AppIcon.icns Claudacity.app/Contents/Resources/
 
 cat > Claudacity.app/Contents/Info.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -19,6 +20,7 @@ cat > Claudacity.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key><string>com.local.claudacity</string>
     <key>CFBundleName</key><string>Claudacity</string>
     <key>CFBundleVersion</key><string>1.0</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
 </dict>
 </plist>
