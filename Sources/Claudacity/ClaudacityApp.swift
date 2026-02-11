@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UserNotifications
 
 @main
 struct ClaudacityApp: App {
@@ -7,17 +8,31 @@ struct ClaudacityApp: App {
     var body: some Scene { Settings { EmptyView() } }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
     private let service = UsageService()
     private var usage: UsageData?
     private var error: (msg: String, help: [String]?)?
     private var loginWindow: LoginWindow?
+    private var notifiedThresholds = Set<Int>()
+    private var notifiedReset = false
+    private static let notificationsEnabledKey = "notificationsEnabled"
+    private var notificationsEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: Self.notificationsEnabledKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: Self.notificationsEnabledKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: Self.notificationsEnabledKey) }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "⏳"
+        let notifCenter = UNUserNotificationCenter.current()
+        notifCenter.delegate = self
+        notifCenter.requestAuthorization(options: [.alert, .sound]) { _, _ in
+            DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
+        }
         refresh()
         Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in self?.refresh() }
     }
@@ -26,12 +41,55 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Task {
             do {
                 let u = try await service.fetch()
-                await MainActor.run { self.usage = u; self.error = nil; self.updateUI() }
+                await MainActor.run {
+                    self.usage = u; self.error = nil; self.updateUI()
+                    self.checkThresholds(u)
+                }
             } catch {
                 let e = error as? UsageService.Err
                 await MainActor.run { self.error = (error.localizedDescription, e?.helpSteps); self.updateUI() }
             }
         }
+    }
+
+    private func checkThresholds(_ u: UsageData) {
+        guard notificationsEnabled else { return }
+        let pct = Int(u.percentage)
+
+        // Reset tracking when usage drops below 50% (new cycle)
+        if pct < 50 {
+            notifiedThresholds.removeAll()
+            notifiedReset = false
+            return
+        }
+
+        // Check if quota has reset (usage was high, now low)
+        if let resetsAt = u.resetsAt, resetsAt.timeIntervalSinceNow <= 0, !notifiedReset {
+            notifiedReset = true
+            sendNotification(title: "Usage has reset", body: "\(u.planName) quota has reset. You're good to go!")
+            notifiedThresholds.removeAll()
+            return
+        }
+
+        let thresholds: [(level: Int, title: String, body: String)] = [
+            (50, "Halfway there", "\(u.planName) usage is at \(pct)%."),
+            (80, "Usage is getting high", "\(u.planName) usage is at \(pct)%. Consider pacing your usage."),
+            (90, "Almost at the limit", "\(u.planName) usage is at \(pct)%.\(u.timeUntilReset.map { " Resets in \($0)." } ?? "")"),
+        ]
+
+        for t in thresholds where pct >= t.level && !notifiedThresholds.contains(t.level) {
+            notifiedThresholds.insert(t.level)
+            sendNotification(title: t.title, body: t.body)
+        }
+    }
+
+    private func sendNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     private func updateUI() {
@@ -78,6 +136,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             signInItem.target = self
             menu.addItem(signInItem)
         }
+        let notifItem = NSMenuItem(title: "Notifications", action: #selector(toggleNotifications), keyEquivalent: "")
+        notifItem.target = self
+        notifItem.state = notificationsEnabled ? .on : .off
+        menu.addItem(notifItem)
         menu.addItem(.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q")
         menu.addItem(quitItem)
@@ -110,7 +172,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func signOutClicked() {
         service.clearKey()
         usage = nil
+        notifiedThresholds.removeAll()
+        notifiedReset = false
         error = ("Signed out", ["Click 'Sign In to Claude...' to authenticate"])
         updateUI()
+    }
+
+    @objc private func toggleNotifications() {
+        notificationsEnabled.toggle()
+        updateUI()
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
 }

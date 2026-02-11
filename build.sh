@@ -20,10 +20,12 @@ cat > Claudacity.app/Contents/Info.plist << 'EOF'
     <key>CFBundleName</key><string>Claudacity</string>
     <key>CFBundleVersion</key><string>1.0</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
-    <key>LSUIElement</key><true/>
 </dict>
 </plist>
 EOF
+
+echo "Signing..."
+codesign --force --deep -s - Claudacity.app
 
 echo "Done: Claudacity.app"
 echo "Run: open Claudacity.app"
