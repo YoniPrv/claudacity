@@ -7,11 +7,12 @@ struct ClaudacityApp: App {
     var body: some Scene { Settings { EmptyView() } }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private let service = UsageService()
     private var usage: UsageData?
     private var error: (msg: String, help: [String]?)?
+    private var loginWindow: LoginWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -65,12 +66,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         menu.addItem(.separator())
-        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshClicked), keyEquivalent: "r")
-        refreshItem.target = self
-        menu.addItem(refreshItem)
-        let keyItem = NSMenuItem(title: "Set Session Key...", action: #selector(setKeyClicked), keyEquivalent: "")
-        keyItem.target = self
-        menu.addItem(keyItem)
+        let isSignedIn = usage != nil
+        if isSignedIn {
+            let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshClicked), keyEquivalent: "r")
+            refreshItem.target = self
+            menu.addItem(refreshItem)
+            let signOutItem = NSMenuItem(title: "Sign Out", action: #selector(signOutClicked), keyEquivalent: "")
+            signOutItem.target = self
+            menu.addItem(signOutItem)
+        } else {
+            let signInItem = NSMenuItem(title: "Sign In to Claude...", action: #selector(signInClicked), keyEquivalent: "")
+            signInItem.target = self
+            menu.addItem(signInItem)
+        }
         menu.addItem(.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q")
         menu.addItem(quitItem)
@@ -80,18 +88,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func refreshClicked() { refresh() }
 
-    @objc private func setKeyClicked() {
-        let alert = NSAlert()
-        alert.messageText = "Set Session Key"
-        alert.informativeText = "From claude.ai: Cmd+Opt+I > Storage > Cookies > sessionKey"
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        field.placeholderString = "Paste session key"
-        alert.accessoryView = field
-        if alert.runModal() == .alertFirstButtonReturn {
-            let key = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !key.isEmpty { service.setKey(key); refresh() }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    @objc private func signInClicked() {
+        NSApp.setActivationPolicy(.regular)
+        loginWindow = LoginWindow { [weak self] key in
+            self?.service.setKey(key)
+            self?.loginWindow?.close()
         }
+        loginWindow?.delegate = self
+        loginWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        let didSignIn = loginWindow?.didExtractKey ?? false
+        loginWindow = nil
+        NSApp.setActivationPolicy(.accessory)
+        if didSignIn { refresh() }
+    }
+
+    @objc private func signOutClicked() {
+        service.clearKey()
+        usage = nil
+        error = ("Signed out", ["Click 'Sign In to Claude...' to authenticate"])
+        updateUI()
     }
 }
