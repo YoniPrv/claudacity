@@ -15,18 +15,39 @@ class LoginWindow: NSWindow, WKHTTPCookieStoreObserver, WKUIDelegate {
                   backing: .buffered,
                   defer: false)
         self.onSessionKey = onSessionKey
+        self.isReleasedWhenClosed = false
         title = "Sign In to Claude"
         center()
 
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
         config.preferences.javaScriptCanOpenWindowsAutomatically = true
+        let script = WKUserScript(source: """
+            new MutationObserver(() => {
+                document.getElementById('credential_picker_container')?.remove();
+                document.querySelectorAll('button').forEach(b => {
+                    if (/^reject$/i.test(b.textContent.trim())) b.click();
+                });
+            }).observe(document.body || document.documentElement, { childList: true, subtree: true });
+            """, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+        config.userContentController.addUserScript(script)
         webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = self
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
-        webView.configuration.websiteDataStore.httpCookieStore.add(self)
         contentView = webView
-        webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
+
+        // Clear stale claude.ai cookies before loading, then start observing
+        let store = webView.configuration.websiteDataStore.httpCookieStore
+        store.getAllCookies { [weak self] cookies in
+            let group = DispatchGroup()
+            for cookie in cookies where cookie.domain.contains("claude.ai") {
+                group.enter()
+                store.delete(cookie) { group.leave() }
+            }
+            group.notify(queue: .main) {
+                store.add(self!)
+                self?.webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
+            }
+        }
     }
 
     // Handle popups (Google SSO) by loading in the same web view
