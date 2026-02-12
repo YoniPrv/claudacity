@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UserNotifications
+import ServiceManagement
 
 @main
 struct ClaudacityApp: App {
@@ -17,6 +18,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     private var notifiedThresholds = Set<Int>()
     private var notifiedReset = false
     private var refreshTimer: Timer?
+    private var currentIconIndex = 0
+    private var iconAnimationTimer: Timer?
+    private static let iconSequence = ["○", "◔", "◑", "◕", "●"]
     private static let notificationsEnabledKey = "notificationsEnabled"
     private static let refreshIntervalKey = "refreshInterval"
     private var notificationsEnabled: Bool {
@@ -106,23 +110,52 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         UNUserNotificationCenter.current().add(request)
     }
 
+    private func animateIcon(to target: Int) {
+        iconAnimationTimer?.invalidate()
+        iconAnimationTimer = nil
+        guard currentIconIndex != target else { return }
+        let step = currentIconIndex < target ? 1 : -1
+        iconAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] timer in
+            guard let self = self else { timer.invalidate(); return }
+            self.currentIconIndex += step
+            let icon = Self.iconSequence[self.currentIconIndex]
+            let pct = Int(self.usage?.percentage ?? 0)
+            let ratio = min(1, max(0, (self.usage?.percentage ?? 0) / 100))
+            let hue = 0.33 * (1 - ratio)
+            let color = NSColor(hue: hue, saturation: 0.9, brightness: 0.85, alpha: 1.0)
+            let str = NSMutableAttributedString()
+            str.append(NSAttributedString(string: icon, attributes: [.foregroundColor: color]))
+            str.append(NSAttributedString(string: " \(pct)%"))
+            self.statusItem.button?.attributedTitle = str
+            if self.currentIconIndex == target { timer.invalidate(); self.iconAnimationTimer = nil }
+        }
+    }
+
     private func updateUI() {
         if error != nil {
+            iconAnimationTimer?.invalidate()
+            iconAnimationTimer = nil
             statusItem.button?.title = "⚠️"
         } else {
-            let icon = usage?.icon ?? "○"
+            let targetIndex = usage?.iconIndex ?? 0
             let pct = Int(usage?.percentage ?? 0)
             // Color based on usage: green (low usage) → red (high usage)
             let ratio = min(1, max(0, (usage?.percentage ?? 0) / 100))
             let hue = 0.33 * (1 - ratio) // 0.33 (green) at 0%, 0.0 (red) at 100%
             let color = NSColor(hue: hue, saturation: 0.9, brightness: 0.85, alpha: 1.0)
+            let icon = Self.iconSequence[currentIconIndex]
             let str = NSMutableAttributedString()
             str.append(NSAttributedString(string: icon, attributes: [.foregroundColor: color]))
             str.append(NSAttributedString(string: " \(pct)%"))
             statusItem.button?.attributedTitle = str
+            animateIcon(to: targetIndex)
         }
 
         let menu = NSMenu()
+        let aboutItem = NSMenuItem(title: "About Claudacity", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "\(usage?.planName ?? "Claude") Usage", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
 
@@ -154,6 +187,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         notifItem.target = self
         notifItem.state = notificationsEnabled ? .on : .off
         menu.addItem(notifItem)
+        let launchItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+        launchItem.target = self
+        launchItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(launchItem)
 
         let refreshSubmenu = NSMenu()
         for (label, seconds) in [("2 minutes", 120), ("5 minutes", 300), ("10 minutes", 600)] {
@@ -202,6 +239,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         notifiedThresholds.removeAll()
         notifiedReset = false
         error = ("Signed out", ["Click 'Sign In to Claude...' to authenticate"])
+        updateUI()
+    }
+
+    @objc private func showAbout() {
+        NSApp.activate(ignoringOtherApps: true)
+        let link = NSMutableAttributedString(string: "GitHub", attributes: [
+            .link: URL(string: "https://github.com/YoniPrv/claudacity")!,
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+        ])
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .credits: link,
+            .applicationVersion: "1.0",
+        ])
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        if SMAppService.mainApp.status == .enabled {
+            try? SMAppService.mainApp.unregister()
+        } else {
+            try? SMAppService.mainApp.register()
+        }
         updateUI()
     }
 

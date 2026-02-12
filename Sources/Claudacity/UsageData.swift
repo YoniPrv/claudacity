@@ -30,6 +30,16 @@ struct UsageData {
         default: return "●"
         }
     }
+
+    var iconIndex: Int {
+        switch percentage {
+        case ..<25: return 0
+        case ..<50: return 1
+        case ..<75: return 2
+        case ..<90: return 3
+        default: return 4
+        }
+    }
 }
 
 struct Organization: Codable {
