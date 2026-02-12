@@ -16,13 +16,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
     private var loginWindow: LoginWindow?
     private var notifiedThresholds = Set<Int>()
     private var notifiedReset = false
+    private var refreshTimer: Timer?
     private static let notificationsEnabledKey = "notificationsEnabled"
+    private static let refreshIntervalKey = "refreshInterval"
     private var notificationsEnabled: Bool {
         get {
             if UserDefaults.standard.object(forKey: Self.notificationsEnabledKey) == nil { return true }
             return UserDefaults.standard.bool(forKey: Self.notificationsEnabledKey)
         }
         set { UserDefaults.standard.set(newValue, forKey: Self.notificationsEnabledKey) }
+    }
+    private var refreshInterval: Int {
+        get {
+            let val = UserDefaults.standard.integer(forKey: Self.refreshIntervalKey)
+            return val > 0 ? val : 600
+        }
+        set { UserDefaults.standard.set(newValue, forKey: Self.refreshIntervalKey) }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -34,7 +43,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
             DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
         }
         refresh()
-        Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in self?.refresh() }
+        scheduleTimer()
+    }
+
+    private func scheduleTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(refreshInterval), repeats: true) { [weak self] _ in self?.refresh() }
     }
 
     private func refresh() {
@@ -140,6 +154,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
         notifItem.target = self
         notifItem.state = notificationsEnabled ? .on : .off
         menu.addItem(notifItem)
+
+        let refreshSubmenu = NSMenu()
+        for (label, seconds) in [("2 minutes", 120), ("5 minutes", 300), ("10 minutes", 600)] {
+            let item = NSMenuItem(title: label, action: #selector(setRefreshInterval(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = seconds
+            item.state = refreshInterval == seconds ? .on : .off
+            refreshSubmenu.addItem(item)
+        }
+        let refreshMenuItem = NSMenuItem(title: "Refresh Every", action: nil, keyEquivalent: "")
+        refreshMenuItem.submenu = refreshSubmenu
+        menu.addItem(refreshMenuItem)
+
         menu.addItem(.separator())
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApp.terminate), keyEquivalent: "q")
         menu.addItem(quitItem)
@@ -180,6 +207,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, UNUserNoti
 
     @objc private func toggleNotifications() {
         notificationsEnabled.toggle()
+        updateUI()
+    }
+
+    @objc private func setRefreshInterval(_ sender: NSMenuItem) {
+        refreshInterval = sender.tag
+        scheduleTimer()
         updateUI()
     }
 
